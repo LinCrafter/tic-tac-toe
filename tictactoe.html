@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', sans-serif;
+      color: #eee;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      letter-spacing: 3px;
+      color: #e94560;
+    }
+
+    #controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 2px solid #0f3460;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .toggle-group button {
+      padding: 0.4rem 1rem;
+      background: transparent;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .toggle-group button.active {
+      background: #0f3460;
+      color: #fff;
+    }
+
+    #status {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+      height: 1.5rem;
+      color: #a8dadc;
+    }
+
+    #score {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+    }
+
+    .score-box { text-align: center; }
+    .score-box span { display: block; font-size: 1.8rem; font-weight: bold; }
+    .score-box.x-score span { color: #e94560; }
+    .score-box.o-score span { color: #a8dadc; }
+    .score-box.tie-score span { color: #888; }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 120px);
+      grid-template-rows: repeat(3, 120px);
+      gap: 8px;
+    }
+
+    .cell {
+      background: #16213e;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken):not(.locked) {
+      background: #0f3460;
+      transform: scale(1.05);
+    }
+
+    .cell.locked { cursor: default; }
+    .cell.x { color: #e94560; }
+    .cell.o { color: #a8dadc; }
+
+    .cell.win {
+      background: #0f3460;
+      box-shadow: 0 0 16px 4px rgba(168, 218, 220, 0.4);
+    }
+
+    #restart {
+      margin-top: 2rem;
+      padding: 0.7rem 2.2rem;
+      font-size: 1rem;
+      border: 2px solid #e94560;
+      background: transparent;
+      color: #e94560;
+      border-radius: 8px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    #restart:hover { background: #e94560; color: #fff; }
+  </style>
+</head>
+<body>
+
+  <h1>TIC TAC TOE</h1>
+
+  <div id="controls">
+    <div class="toggle-group" id="modeToggle">
+      <button data-mode="human" class="active">2 Players</button>
+      <button data-mode="ai">vs AI</button>
+    </div>
+    <div class="toggle-group" id="diffToggle" style="display:none">
+      <button data-diff="easy">Easy</button>
+      <button data-diff="medium">Medium</button>
+      <button data-diff="hard" class="active">Hard</button>
+    </div>
+    <div class="toggle-group" id="sideToggle" style="display:none">
+      <button data-side="X" class="active">Play as X</button>
+      <button data-side="O">Play as O</button>
+    </div>
+  </div>
+
+  <div id="score">
+    <div class="score-box x-score" id="scoreX">X <span id="xWins">0</span></div>
+    <div class="score-box tie-score">Ties <span id="ties">0</span></div>
+    <div class="score-box o-score" id="scoreO">O <span id="oWins">0</span></div>
+  </div>
+
+  <div id="status">X's turn</div>
+
+  <div id="board">
+    <div class="cell" data-i="0"></div>
+    <div class="cell" data-i="1"></div>
+    <div class="cell" data-i="2"></div>
+    <div class="cell" data-i="3"></div>
+    <div class="cell" data-i="4"></div>
+    <div class="cell" data-i="5"></div>
+    <div class="cell" data-i="6"></div>
+    <div class="cell" data-i="7"></div>
+    <div class="cell" data-i="8"></div>
+  </div>
+
+  <button id="restart">Restart</button>
+
+  <script>
+    const cells = document.querySelectorAll('.cell');
+    const statusEl = document.getElementById('status');
+    const xWinsEl = document.getElementById('xWins');
+    const oWinsEl = document.getElementById('oWins');
+    const tiesEl = document.getElementById('ties');
+    const scoreXEl = document.getElementById('scoreX');
+    const scoreOEl = document.getElementById('scoreO');
+    const diffToggle = document.getElementById('diffToggle');
+    const sideToggle = document.getElementById('sideToggle');
+
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    let board, current, gameOver;
+    let score = { X: 0, O: 0, tie: 0 };
+    let mode = 'human';   // 'human' | 'ai'
+    let difficulty = 'hard'; // 'easy' | 'medium' | 'hard'
+    let humanSide = 'X';
+    let aiSide = 'O';
+
+    // --- Toggle controls ---
+    document.getElementById('modeToggle').addEventListener('click', e => {
+      const btn = e.target.closest('[data-mode]');
+      if (!btn) return;
+      mode = btn.dataset.mode;
+      document.querySelectorAll('#modeToggle button').forEach(b => b.classList.toggle('active', b === btn));
+      diffToggle.style.display = mode === 'ai' ? '' : 'none';
+      sideToggle.style.display = mode === 'ai' ? '' : 'none';
+      updateScoreLabels();
+      resetScore();
+      init();
+    });
+
+    document.getElementById('diffToggle').addEventListener('click', e => {
+      const btn = e.target.closest('[data-diff]');
+      if (!btn) return;
+      difficulty = btn.dataset.diff;
+      document.querySelectorAll('#diffToggle button').forEach(b => b.classList.toggle('active', b === btn));
+      resetScore();
+      init();
+    });
+
+    document.getElementById('sideToggle').addEventListener('click', e => {
+      const btn = e.target.closest('[data-side]');
+      if (!btn) return;
+      humanSide = btn.dataset.side;
+      aiSide = humanSide === 'X' ? 'O' : 'X';
+      document.querySelectorAll('#sideToggle button').forEach(b => b.classList.toggle('active', b === btn));
+      updateScoreLabels();
+      resetScore();
+      init();
+    });
+
+    document.getElementById('restart').addEventListener('click', init);
+
+    function updateScoreLabels() {
+      if (mode === 'ai') {
+        scoreXEl.childNodes[0].textContent = humanSide === 'X' ? 'You ' : 'AI ';
+        scoreOEl.childNodes[0].textContent = humanSide === 'O' ? 'You ' : 'AI ';
+      } else {
+        scoreXEl.childNodes[0].textContent = 'X ';
+        scoreOEl.childNodes[0].textContent = 'O ';
+      }
+    }
+
+    function resetScore() {
+      score = { X: 0, O: 0, tie: 0 };
+      xWinsEl.textContent = 0;
+      oWinsEl.textContent = 0;
+      tiesEl.textContent = 0;
+    }
+
+    // --- Game logic ---
+    function init() {
+      board = Array(9).fill('');
+      current = 'X';
+      gameOver = false;
+      cells.forEach(c => { c.textContent = ''; c.className = 'cell'; });
+
+      if (mode === 'ai' && aiSide === 'X') {
+        statusEl.textContent = "AI is thinking...";
+        lockBoard(true);
+        setTimeout(doAiMove, 400);
+      } else {
+        statusEl.textContent = turnLabel('X');
+      }
+    }
+
+    function turnLabel(player) {
+      if (mode === 'ai') {
+        return player === humanSide ? "Your turn" : "AI is thinking...";
+      }
+      return `${player}'s turn`;
+    }
+
+    function lockBoard(lock) {
+      cells.forEach(c => c.classList.toggle('locked', lock));
+    }
+
+    function checkWinner(b) {
+      for (const [a, i, c] of WINS) {
+        if (b[a] && b[a] === b[i] && b[a] === b[c]) return { winner: b[a], line: [a, i, c] };
+      }
+      if (b.every(v => v)) return { winner: null, line: [] };
+      return null;
+    }
+
+    function applyMove(index, player) {
+      board[index] = player;
+      const cell = cells[index];
+      cell.textContent = player;
+      cell.classList.add(player.toLowerCase(), 'taken');
+
+      const result = checkWinner(board);
+      if (result) {
+        gameOver = true;
+        lockBoard(true);
+        if (result.winner) {
+          result.line.forEach(idx => cells[idx].classList.add('win'));
+          if (mode === 'ai') {
+            statusEl.textContent = result.winner === humanSide ? "You win!" : "AI wins!";
+          } else {
+            statusEl.textContent = `${result.winner} wins!`;
+          }
+          score[result.winner]++;
+        } else {
+          statusEl.textContent = "It's a tie!";
+          score.tie++;
+        }
+        xWinsEl.textContent = score.X;
+        oWinsEl.textContent = score.O;
+        tiesEl.textContent = score.tie;
+        return;
+      }
+
+      current = current === 'X' ? 'O' : 'X';
+
+      if (mode === 'ai' && current === aiSide) {
+        statusEl.textContent = "AI is thinking...";
+        lockBoard(true);
+        setTimeout(doAiMove, 350);
+      } else {
+        if (mode === 'ai') lockBoard(false);
+        statusEl.textContent = turnLabel(current);
+      }
+    }
+
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => {
+        const i = +cell.dataset.i;
+        if (gameOver || board[i] || cell.classList.contains('locked')) return;
+        if (mode === 'ai' && current !== humanSide) return;
+        applyMove(i, current);
+      });
+    });
+
+    // --- AI ---
+    function doAiMove() {
+      if (gameOver) return;
+      let move;
+      if (difficulty === 'easy') {
+        move = easyMove();
+      } else if (difficulty === 'medium') {
+        move = Math.random() < 0.5 ? bestMove() : easyMove();
+      } else {
+        move = bestMove();
+      }
+      lockBoard(false);
+      applyMove(move, aiSide);
+    }
+
+    function easyMove() {
+      const empty = board.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+
+    function bestMove() {
+      let best = -Infinity, move = -1;
+      for (let i = 0; i < 9; i++) {
+        if (board[i]) continue;
+        board[i] = aiSide;
+        const score = minimax(board, 0, false, -Infinity, Infinity);
+        board[i] = '';
+        if (score > best) { best = score; move = i; }
+      }
+      return move;
+    }
+
+    function minimax(b, depth, isMax, alpha, beta) {
+      const result = checkWinner(b);
+      if (result) {
+        if (result.winner === aiSide) return 10 - depth;
+        if (result.winner === humanSide) return depth - 10;
+        return 0;
+      }
+
+      if (isMax) {
+        let best = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i]) continue;
+          b[i] = aiSide;
+          best = Math.max(best, minimax(b, depth + 1, false, alpha, beta));
+          b[i] = '';
+          alpha = Math.max(alpha, best);
+          if (beta <= alpha) break;
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (b[i]) continue;
+          b[i] = humanSide;
+          best = Math.min(best, minimax(b, depth + 1, true, alpha, beta));
+          b[i] = '';
+          beta = Math.min(beta, best);
+          if (beta <= alpha) break;
+        }
+        return best;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
