@@ -5,6 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tic Tac Toe</title>
   <style>
+    :root {
+      --bg: #1a1a2e;
+      --text: #eee;
+      --text-muted: #aaa;
+      --cell-bg: #16213e;
+      --toggle-border: #0f3460;
+      --toggle-active-bg: #0f3460;
+      --toggle-active-text: #fff;
+      --accent: #e94560;
+      --accent2: #a8dadc;
+      --tie-color: #888;
+      --cell-hover: #0f3460;
+      --win-shadow: rgba(168, 218, 220, 0.4);
+      --theme-btn-border: #0f3460;
+      --theme-btn-text: #aaa;
+    }
+
+    body.light {
+      --bg: #f0f4f8;
+      --text: #1a1a2e;
+      --text-muted: #666;
+      --cell-bg: #dde4f0;
+      --toggle-border: #b0c4de;
+      --toggle-active-bg: #0f3460;
+      --toggle-active-text: #fff;
+      --accent: #e94560;
+      --accent2: #0a6fa0;
+      --tie-color: #777;
+      --cell-hover: #c5d0e8;
+      --win-shadow: rgba(10, 111, 160, 0.25);
+      --theme-btn-border: #b0c4de;
+      --theme-btn-text: #555;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -13,16 +47,17 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #1a1a2e;
+      background: var(--bg);
       font-family: 'Segoe UI', sans-serif;
-      color: #eee;
+      color: var(--text);
+      transition: background 0.25s, color 0.25s;
     }
 
     h1 {
       font-size: 2.5rem;
       margin-bottom: 1rem;
       letter-spacing: 3px;
-      color: #e94560;
+      color: var(--accent);
     }
 
     #controls {
@@ -35,31 +70,32 @@
 
     .toggle-group {
       display: flex;
-      border: 2px solid #0f3460;
+      border: 2px solid var(--toggle-border);
       border-radius: 8px;
       overflow: hidden;
+      transition: border-color 0.25s;
     }
 
     .toggle-group button {
       padding: 0.4rem 1rem;
       background: transparent;
       border: none;
-      color: #aaa;
+      color: var(--text-muted);
       cursor: pointer;
       font-size: 0.9rem;
       transition: background 0.15s, color 0.15s;
     }
 
     .toggle-group button.active {
-      background: #0f3460;
-      color: #fff;
+      background: var(--toggle-active-bg);
+      color: var(--toggle-active-text);
     }
 
     #status {
       font-size: 1.2rem;
       margin-bottom: 1.5rem;
       height: 1.5rem;
-      color: #a8dadc;
+      color: var(--accent2);
     }
 
     #score {
@@ -71,9 +107,9 @@
 
     .score-box { text-align: center; }
     .score-box span { display: block; font-size: 1.8rem; font-weight: bold; }
-    .score-box.x-score span { color: #e94560; }
-    .score-box.o-score span { color: #a8dadc; }
-    .score-box.tie-score span { color: #888; }
+    .score-box.x-score span { color: var(--accent); }
+    .score-box.o-score span { color: var(--accent2); }
+    .score-box.tie-score span { color: var(--tie-color); }
 
     #board {
       display: grid;
@@ -83,7 +119,7 @@
     }
 
     .cell {
-      background: #16213e;
+      background: var(--cell-bg);
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -96,36 +132,52 @@
     }
 
     .cell:hover:not(.taken):not(.locked) {
-      background: #0f3460;
+      background: var(--cell-hover);
       transform: scale(1.05);
     }
 
     .cell.locked { cursor: default; }
-    .cell.x { color: #e94560; }
-    .cell.o { color: #a8dadc; }
+    .cell.x { color: var(--accent); }
+    .cell.o { color: var(--accent2); }
 
     .cell.win {
-      background: #0f3460;
-      box-shadow: 0 0 16px 4px rgba(168, 218, 220, 0.4);
+      background: var(--cell-hover);
+      box-shadow: 0 0 16px 4px var(--win-shadow);
     }
 
     #restart {
       margin-top: 2rem;
       padding: 0.7rem 2.2rem;
       font-size: 1rem;
-      border: 2px solid #e94560;
+      border: 2px solid var(--accent);
       background: transparent;
-      color: #e94560;
+      color: var(--accent);
       border-radius: 8px;
       cursor: pointer;
       letter-spacing: 1px;
       transition: background 0.2s, color 0.2s;
     }
 
-    #restart:hover { background: #e94560; color: #fff; }
+    #restart:hover { background: var(--accent); color: #fff; }
+
+    #themeToggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.85rem;
+      border: 2px solid var(--theme-btn-border);
+      background: transparent;
+      color: var(--theme-btn-text);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.25s, color 0.25s;
+    }
   </style>
 </head>
 <body>
+
+  <button id="themeToggle">Light</button>
 
   <h1>TIC TAC TOE</h1>
 
@@ -190,6 +242,18 @@
     let difficulty = 'hard'; // 'easy' | 'medium' | 'hard'
     let humanSide = 'X';
     let aiSide = 'O';
+
+    // --- Theme toggle ---
+    const themeBtn = document.getElementById('themeToggle');
+    if (localStorage.getItem('theme') === 'light') {
+      document.body.classList.add('light');
+      themeBtn.textContent = 'Dark';
+    }
+    themeBtn.addEventListener('click', () => {
+      const isLight = document.body.classList.toggle('light');
+      themeBtn.textContent = isLight ? 'Dark' : 'Light';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
 
     // --- Toggle controls ---
     document.getElementById('modeToggle').addEventListener('click', e => {
