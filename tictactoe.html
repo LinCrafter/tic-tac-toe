@@ -110,6 +110,7 @@
     .score-box.x-score span { color: var(--accent); }
     .score-box.o-score span { color: var(--accent2); }
     .score-box.tie-score span { color: var(--tie-color); }
+    .score-box small { display: block; font-size: 0.72rem; color: var(--text-muted); min-height: 1.1em; margin-top: 0.15rem; }
 
     #board {
       display: grid;
@@ -198,9 +199,9 @@
   </div>
 
   <div id="score">
-    <div class="score-box x-score" id="scoreX">X <span id="xWins">0</span></div>
+    <div class="score-box x-score" id="scoreX">X <span id="xWins">0</span><small id="xStreak"></small></div>
     <div class="score-box tie-score">Ties <span id="ties">0</span></div>
-    <div class="score-box o-score" id="scoreO">O <span id="oWins">0</span></div>
+    <div class="score-box o-score" id="scoreO">O <span id="oWins">0</span><small id="oStreak"></small></div>
   </div>
 
   <div id="status">X's turn</div>
@@ -229,6 +230,8 @@
     const scoreOEl = document.getElementById('scoreO');
     const diffToggle = document.getElementById('diffToggle');
     const sideToggle = document.getElementById('sideToggle');
+    const xStreakEl = document.getElementById('xStreak');
+    const oStreakEl = document.getElementById('oStreak');
 
     const WINS = [
       [0,1,2],[3,4,5],[6,7,8],
@@ -238,6 +241,7 @@
 
     let board, current, gameOver;
     let score = { X: 0, O: 0, tie: 0 };
+    let streak = { X: 0, O: 0 };
     let mode = 'human';   // 'human' | 'ai'
     let difficulty = 'hard'; // 'easy' | 'medium' | 'hard'
     let humanSide = 'X';
@@ -302,9 +306,24 @@
 
     function resetScore() {
       score = { X: 0, O: 0, tie: 0 };
+      streak = { X: 0, O: 0 };
       xWinsEl.textContent = 0;
       oWinsEl.textContent = 0;
       tiesEl.textContent = 0;
+      xStreakEl.textContent = '';
+      oStreakEl.textContent = '';
+    }
+
+    function updateStreak(winner) {
+      if (winner) {
+        streak[winner]++;
+        streak[winner === 'X' ? 'O' : 'X'] = 0;
+      } else {
+        streak.X = 0;
+        streak.O = 0;
+      }
+      xStreakEl.textContent = streak.X >= 2 ? `${streak.X} in a row` : '';
+      oStreakEl.textContent = streak.O >= 2 ? `${streak.O} in a row` : '';
     }
 
     // --- Game logic ---
@@ -364,6 +383,7 @@
           statusEl.textContent = "It's a tie!";
           score.tie++;
         }
+        updateStreak(result.winner);
         xWinsEl.textContent = score.X;
         oWinsEl.textContent = score.O;
         tiesEl.textContent = score.tie;
